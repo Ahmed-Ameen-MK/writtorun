@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WritoRun - Multi-Language Code Editor</title>
+  <link rel="icon" href="i.png">
+  <meta name="google-adsense-account" content="ca-pub-7755642962164006">
+  <meta name="google-site-verification" content="K52LXkI1QWuhb37VrSIjf2abbsgOK21csY3tbUV8MbI" />
+  <script src="https://skulpt.org/js/skulpt.min.js"></script>
+  <script src="https://skulpt.org/js/skulpt-stdlib.js"></script>
+  <style>
+    :root {
+      --primary-color: #007acc;
+      --secondary-color: #005a9e;
+      --dark-bg: #1e1e1e;
+      --light-bg: #f5f5f5;
+      --text-light: #ffffff;
+      --text-dark: #333333;
+      --sidebar-width: 300px;
+      --transition-speed: 0.3s;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      transition: background-color var(--transition-speed), color var(--transition-speed);
+      overflow-x: hidden;
+    }
+    #top-bar {
+      background: var(--primary-color);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    #brand { display: flex; align-items: center; }
+    #brand h1 { font-size: 22px; margin-right: 10px; }
+    #brand span { font-size: 12px; opacity: 0.8; display: flex; align-items: center; }
+    .brand-icons { display: flex; align-items: center; margin-left: 8px; }
+    .brand-icon { width: 20px; height: 20px; margin-left: 8px; cursor: pointer; transition: transform var(--transition-speed); }
+    .brand-icon:hover { transform: scale(1.1); }
+    #top-bar-buttons { display: flex; gap: 8px; }
+    #top-bar button { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    #editor-buttons {
+      background: #000;
+      padding: 8px 15px;
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid #333;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    #editor-buttons button {
+      height: 40px;
+      border: none;
+      border-radius: 6px;
+      background: #000;
+      cursor: pointer;
+      color: white;
+      padding: 0 15px;
+      font-weight: 500;
+    }
+    #editor-buttons button.active { background: var(--primary-color); }
+    #editor-buttons button:hover { background: #333; }
+    .python-output-panel {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border-top: 1px solid #333;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 14px;
+      height: 200px;
+      overflow-y: auto;
+      display: none;
+      flex-direction: column;
+    }
+    .python-output-panel h4 {
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    .python-output-area {
+      white-space: pre-wrap;
+      flex: 1;
+    }
+    .python-output-actions {
+      margin-top: 5px;
+      display: flex;
+      gap: 10px;
+    }
+    .python-output-actions button {
+      background: #007acc;
+      border: none;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #main-container { display: flex; height: calc(100vh - 150px); }
+    #editor-container { flex: 1; height: 100%; }
+    #sidebar {
+      width: var(--sidebar-width);
+      background: #f9f9f9;
+      border-left: 1px solid #ddd;
+      overflow-y: auto;
+      padding: 0 15px 15px;
+      flex-shrink: 0;
+    }
+    #sidebar-toggle-header {
+      display: flex;
+      gap: 0;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #ddd;
+      position: sticky;
+      top: 0;
+      background: #f9f9f9;
+      z-index: 10;
+      padding-top: 12px;
+    }
+    .sidebar-tab {
+      flex: 1;
+      padding: 9px 6px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: #888;
+      border-bottom: 3px solid transparent;
+    }
+    .sidebar-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .settings-label { font-size: 14px; font-weight: 500; }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top:0; left:0; right:0; bottom:0;
+      background-color: #ccc;
+      border-radius: 24px;
+      transition: .3s;
+    }
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: .3s;
+    }
+    input:checked + .toggle-slider { background-color: var(--primary-color); }
+    input:checked + .toggle-slider:before { transform: translateX(20px); }
+    .sidebar-button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 8px;
+      border: none;
+      border-radius: 6px;
+      background: var(--primary-color);
+      color: white;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .sidebar-button:hover { background: var(--secondary-color); }
+    .danger-button { background: #dc3545; }
+    .danger-button:hover { background: #bb2d3b; }
+    #projects-list { margin-top: 15px; }
+    .project-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      margin-bottom: 8px;
+      background: white;
+      border-radius: 6px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .project-info { flex-grow: 1; cursor: pointer; }
+    .project-name { font-weight: 600; font-size: 14px; }
+    .project-type { font-size: 11px; color: #666; }
+    .project-actions { display: flex; gap: 6px; }
+    .project-action { background: none; border: none; cursor: pointer; font-size: 14px; color: #666; }
+    #preview-pane { width: 100%; height: calc(100vh - 50px); display: none; }
+    #preview-pane iframe { width: 100%; height: 100%; border: none; }
+    #project-modal, #about-us-modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 15px;
+      width: 350px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .modal-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+    .close-modal { background: none; border: none; font-size: 18px; cursor: pointer; }
+    .modal-body input, .modal-body select, .modal-body button { width: 100%; margin-bottom: 12px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+    .modal-body button { background: var(--primary-color); color: white; border: none; cursor: pointer; }
+    .about-icons { display: flex; justify-content: center; margin: 15px 0; gap: 20px; }
+    .about-icon { width: 40px; height: 40px; cursor: pointer; transition: transform var(--transition-speed); }
+    #welcome-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 25px 35px;
+      border-radius: 12px;
+      text-align: center;
+      z-index: 10000;
+      animation: fadeOut 3s forwards;
+      animation-delay: 2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+    #mobile-message {
+      display: none;
+      position: fixed;
+      top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,0,0.95);
+      color: white;
+      z-index: 10001;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      flex-direction: column;
+    }
+    #bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #000;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 20px;
+      font-size: 14px;
+      z-index: 100;
+    }
+    #connection-status { display: flex; align-items: center; gap: 8px; }
+    .status-indicator { width: 10px; height: 10px; border-radius: 50%; background: #28a745; }
+    .status-indicator.offline { background: #dc3545; }
+    #error-count { display: flex; align-items: center; gap: 8px; }
+    #privacy-policy, #about-us { background: none; border: none; color: white; cursor: pointer; text-decoration: underline; margin: 0 10px; }
+    body.dark-mode { background-color: var(--dark-bg); color: var(--text-light); }
+    body.dark-mode #sidebar { background: #252526; border-left-color: #3e3e42; }
+    body.dark-mode #sidebar-toggle-header { background: #252526; border-bottom-color: #3e3e42; }
+    body.dark-mode .sidebar-tab { color: #aaa; }
+    body.dark-mode .project-item { background: #2d2d30; color: var(--text-light); }
+    body.dark-mode .project-type { color: #ccc; }
+    body.dark-mode #project-modal, body.dark-mode #about-us-modal { background: #2d2d30; border-color: #3e3e42; }
+    body.dark-mode .modal-body input, body.dark-mode .modal-body select { background: #1e1e1e; color: white; border-color: #3e3e42; }
+    #learn-programming {
+      position: fixed;
+      bottom: 40px;
+      right: 20px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 10px 16px;
+      cursor: pointer;
+      z-index: 1000;
+    }
+    @media (max-width: 768px) {
+      #mobile-message { display: flex; }
+      #top-bar, #editor-buttons, #main-container, #bottom-bar { display: none; }
+    }
+    select#language-mode-select, select#ui-language-select, select#download-format-select, select#font-family-select {
+      padding: 6px;
+      border-radius: 6px;
+      background: #2d2d2d;
+      color: white;
+      border: 1px solid #555;
+    }
+    body.dark-mode select#language-mode-select, body.dark-mode select#ui-language-select, body.dark-mode select#download-format-select, body.dark-mode select#font-family-select {
+      background: #3c3c3c;
+      color: white;
+    }
+    .restore-btn-container {
+      margin: 16px 0 8px;
+    }
+    #restore-default-btn {
+      width: 100%;
+      background: #4a4a4a;
+      border: 2px solid #ffaa33;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      color: white;
+      transition: all 0.2s ease;
+    }
+    #restore-default-btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      background: #5a5a5a;
+    }
+    .color-picker-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .color-picker-row input {
+      width: 50px;
+      height: 38px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+      background: transparent;
+    }
+    body.dark-mode .color-picker-row input {
+      border-color: #555;
+    }
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .slider-row input {
+      flex: 1;
+      min-width: 120px;
+    }
+    .slider-row span {
+      min-width: 45px;
+      text-align: center;
+    }
+    .inline-button {
+      background: var(--primary-color);
+      border: none;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    /* External Libraries Modal */
+    #ext-libs-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 9998;
+    }
+    #ext-libs-modal {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #1e1e1e;
+      border: 1px solid #444;
+      border-radius: 12px;
+      width: 800px;
+      max-width: 95vw;
+      max-height: 85vh;
+      z-index: 9999;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      display: none;
+      flex-direction: column;
+    }
+    #ext-libs-modal.open { display: flex; }
+    #ext-libs-overlay.open { display: block; }
+    #ext-libs-header {
+      background: #007acc;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    #ext-libs-header h3 { color: white; font-size: 16px; margin: 0; }
+    #ext-libs-close {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #ext-libs-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    #ext-libs-list {
+      width: 220px;
+      border-right: 1px solid #333;
+      overflow-y: auto;
+      flex-shrink: 0;
+      padding: 10px 0;
+    }
+    #ext-libs-search {
+      width: calc(100% - 20px);
+      margin: 0 10px 10px;
+      padding: 7px 10px;
+      background: #2d2d30;
+      border: 1px solid #555;
+      border-radius: 6px;
+      color: white;
+      font-size: 13px;
+      display: block;
+    }
+    #ext-libs-search::placeholder { color: #888; }
+    .lib-item {
+      padding: 9px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #ccc;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .lib-item:hover { background: #2d2d30; color: white; }
+    .lib-item.active { background: #094771; color: white; border-left-color: #007acc; }
+    .lib-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: #444;
+      color: #aaa;
+      margin-left: auto;
+    }
+    .lib-badge.css { background: #1a3a5c; color: #4fc1e9; }
+    .lib-badge.js { background: #3a2a00; color: #f0c040; }
+    .lib-badge.font { background: #1a3a1a; color: #6fcf6f; }
+    #ext-libs-detail {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      color: #ccc;
+    }
+    #ext-libs-detail h2 {
+      color: white;
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+    #ext-libs-detail .lib-category {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+    #ext-libs-detail .lib-desc {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #bbb;
+      margin-bottom: 20px;
+      padding: 12px 16px;
+      background: #2a2a2a;
+      border-radius: 8px;
+      border-left: 3px solid #007acc;
+    }
+    #ext-libs-detail .lib-version {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 16px;
+    }
+    .code-block-wrapper {
+      position: relative;
+      margin-bottom: 16px;
+    }
+    .code-block-label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 6px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .code-block {
+      background: #0d0d0d;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: 'Fira Code', Consolas, monospace;
+      font-size: 12px;
+      color: #e8e8e8;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.6;
+    }
+    .code-block .tag { color: #569cd6; }
+    .code-block .attr { color: #9cdcfe; }
+    .code-block .val { color: #ce9178; }
+    .lib-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .lib-btn-copy {
+      background: #2d2d30;
+      border: 1px solid #555;
+      color: white;
+      padding: 9px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .lib-btn-copy:hover { background: #3e3e42; }
+    .lib-btn-install {
+      background: #007acc;
+      border: none;
+      color: white;
+      padding: 9px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .lib-btn-install:hover { background: #005a9e; }
+    .lib-btn-install.installed {
+      background: #28a745;
+      cursor: default;
+    }
+    #ext-libs-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #555;
+      gap: 12px;
+    }
+    #ext-libs-placeholder span { font-size: 48px; }
+    #ext-libs-placeholder p { font-size: 14px; }
+    #ext-libs-btn {
+      background: #28a745 !important;
+      font-weight: 600;
+    }
+    #ext-libs-btn:hover { background: #218838 !important; }
+  </style>
+</head>
+<body>
+<div id="welcome-message" style="display: none;"><img src="i.png" style="height:3cm;"><h2 data-i18n="welcome_title">Welcome to WritoRun</h2><p data-i18n="welcome_text">The integrated code editor that meets all your programming needs</p></div>
+<div id="mobile-message"><h2 data-i18n="mobile_title">Limited User Experience</h2><p data-i18n="mobile_text">For the best experience, we recommend using a computer</p></div>
+<div id="top-bar"><div id="brand"><h1>WritoRun</h1><span data-i18n="produced_by">produced by</span> <a href="#" style="color:white;">Eleccell CO.</a><div class="brand-icons"><img src="https://eleccell.netlify.app/i.png" class="brand-icon" onclick="window.open('https://eleccell.netlify.app')"><img src="https://telegram.org/favicon.ico" class="brand-icon" onclick="window.open('https://t.me/eleccell')"></div></span></div><div id="top-bar-buttons"></div></div>
+<div id="editor-buttons"><button data-lang="html" class="active" data-i18n="btn_html">HTML</button><button data-lang="css" data-i18n="btn_css">CSS</button><button data-lang="javascript" data-i18n="btn_js">JS</button><button id="search-btn" data-i18n="btn_search">Search</button><button id="run-preview" data-i18n="btn_preview">Preview</button><button id="run-tab" data-i18n="btn_newtab">New Tab</button><button id="download-html" data-i18n="btn_download">Download</button><button id="copy-btn" data-i18n="btn_copy">Copy</button><button id="run-python-btn" style="display:none; background:#306998;" data-i18n="btn_runpython">Run Python</button><button id="ext-libs-btn">📦 External Libraries</button></div>
+<div id="ext-libs-overlay"></div>
+<div id="ext-libs-modal">
+  <div id="ext-libs-header">
+    <h3>📦 External Libraries</h3>
+    <button id="ext-libs-close">✕</button>
+  </div>
+  <div id="ext-libs-body">
+    <div id="ext-libs-list">
+      <input type="text" id="ext-libs-search" placeholder="🔍 Search libraries...">
+      <div id="ext-libs-items"></div>
+    </div>
+    <div id="ext-libs-detail">
+      <div id="ext-libs-placeholder">
+        <span>📦</span>
+        <p>Select a library to view details</p>
+      </div>
+      <div id="ext-libs-info" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+<div id="main-container"><div id="editor-container"></div><div id="sidebar"><div id="sidebar-toggle-header"><button id="sidebar-tab-projects" class="sidebar-tab active" data-i18n="tab_projects">📂 Projects</button><button id="sidebar-tab-settings" class="sidebar-tab" data-i18n="tab_settings">⚙️ Settings</button></div><div id="sidebar-projects-panel"><button class="sidebar-button" id="new-project-btn" data-i18n="btn_newproject">+ New Project</button><button class="sidebar-button" id="import-project-btn" data-i18n="btn_import">📁 Import Project</button><div id="projects-list"></div></div><div id="sidebar-settings-panel" style="display:none;"><h4 data-i18n="settings_title">Settings</h4>
+<div class="settings-row"><label class="settings-label" data-i18n="settings_lang_prog">🌐 Programming Language</label><select id="language-mode-select"><option value="web" data-i18n="opt_web">Web (HTML/CSS/JS)</option><option value="python" data-i18n="opt_python">Python</option></select></div>
+<div class="settings-row"><label class="settings-label" data-i18n="settings_ui_lang">🌍 Interface Language</label><select id="ui-language-select"><option value="ar">العربية</option><option value="en" selected>English</option><option value="ko">한국어</option><option value="ja">日本語</option><option value="zh">中文</option><option value="ru">Русский</option></select></div>
+<div class="settings-row"><label class="settings-label" data-i18n="download_format">📥 Download Format</label><select id="download-format-select"><option value="single" data-i18n="opt_single">Single HTML file</option><option value="separate" data-i18n="opt_separate">Separate files (HTML/CSS/JS)</option></select></div>
+<div class="settings-row"><label class="settings-label" data-i18n="settings_darkmode">🌙 Dark Mode</label><label class="toggle-switch"><input type="checkbox" id="dark-mode-toggle"><span class="toggle-slider"></span></label></div>
+<div class="settings-row"><label class="settings-label" data-i18n="settings_autoindent">↹ Auto Indent</label><label class="toggle-switch"><input type="checkbox" id="auto-indent-toggle" checked><span class="toggle-slider"></span></label></div>
+<div class="settings-row"><label class="settings-label" data-i18n="settings_fontsize">🔤 Font Size</label><div class="slider-row"><input type="range" id="font-size-slider" min="12" max="30" step="1" value="16"><span id="font-size-value">16px</span><button id="reset-font-size" class="inline-button" data-i18n="btn_reset">Reset</button></div></div>
+<div class="settings-row"><label class="settings-label" data-i18n="settings_fontfamily">✍️ Font Family</label><select id="font-family-select"><option value="'Fira Code', monospace">Fira Code</option><option value="'Source Code Pro', monospace">Source Code Pro</option><option value="Consolas, monospace">Consolas</option><option value="Monaco, monospace">Monaco</option><option value="'Courier New', monospace">Courier New</option></select></div>
+<div class="settings-row"><label class="settings-label" data-i18n="settings_deleteall">🗑️ Delete All Projects</label><button id="delete-all-projects" class="sidebar-button danger-button" style="width:auto; padding:6px 12px;" data-i18n="btn_deleteall">Delete All</button></div>
+<div class="settings-row"><label class="settings-label" data-i18n="settings_asklocation">📁 Ask for download location</label><label class="toggle-switch"><input type="checkbox" id="ask-download-location"><span class="toggle-slider"></span></label></div>
+<div class="settings-row"><label class="settings-label" data-i18n="settings_theme_colors">🎨 Custom Theme Colors</label></div>
+<div class="settings-row color-picker-row"><label class="settings-label" data-i18n="color_keyword">🔑 Keyword (tags)</label><input type="color" id="primary-color-picker" value="#569CD6"></div>
+<div class="settings-row color-picker-row"><label class="settings-label" data-i18n="color_string">📝 String Color</label><input type="color" id="secondary-color-picker" value="#CE9178"></div>
+<div class="settings-row color-picker-row"><label class="settings-label" data-i18n="color_comment">💬 Comment Color</label><input type="color" id="comment-color-picker" value="#6A9955"></div>
+<div class="settings-row color-picker-row"><label class="settings-label" data-i18n="color_bracket">🔗 Brackets / Operators</label><input type="color" id="bracket-color-picker" value="#E06C75"></div>
+<div class="settings-row color-picker-row"><label class="settings-label" data-i18n="color_attribute">🏷️ Attribute Name</label><input type="color" id="attribute-color-picker" value="#9CDCFE"></div>
+<div class="settings-row color-picker-row"><label class="settings-label" data-i18n="color_attrvalue">🔧 Attribute Value</label><input type="color" id="attrvalue-color-picker" value="#CE9178"></div>
+<div class="settings-row color-picker-row"><label class="settings-label" data-i18n="color_cssprop">🎨 CSS Property</label><input type="color" id="cssprop-color-picker" value="#D7BA7D"></div>
+<div class="restore-btn-container">
+  <button id="restore-default-btn" data-i18n="btn_restore">⟳ Restore Default Colors</button>
+</div>
+</div></div></div>
+<div id="preview-pane"><iframe id="preview-frame"></iframe></div>
+<div class="python-output-panel" id="python-output-panel"><h4 data-i18n="python_output_title">🐍 Python Output</h4><div class="python-output-area" id="python-output-area"></div><div class="python-output-actions"><button id="clear-python-output" data-i18n="btn_clearoutput">Clear Output</button></div></div>
+<div id="project-modal"><div class="modal-header"><h4 data-i18n="modal_newproject">New Project</h4><button class="close-modal" id="close-project-modal">✕</button></div><div class="modal-body"><input type="text" id="project-name" placeholder="Project Name" data-i18n-placeholder="placeholder_projectname"><select id="project-type"><option value="html-css-js" data-i18n="type_website">Website (HTML+CSS+JS)</option><option value="js" data-i18n="type_js">JavaScript File</option><option value="html" data-i18n="type_html">HTML File</option><option value="css" data-i18n="type_css">CSS File</option><option value="python" data-i18n="type_python">Python File (.py)</option></select><button id="create-project-btn" data-i18n="btn_create">Create</button></div></div>
+<div id="about-us-modal"><div class="modal-header"><h4 data-i18n="about_title">About Us</h4><button class="close-modal" id="close-about-modal">✕</button></div><div class="modal-body"><p data-i18n="about_text">WritoRun - Integrated Web Editor</p><div class="about-icons"><img src="https://eleccell.netlify.app/i.png" class="about-icon" onclick="window.open('https://eleccell.netlify.app')"><img src="https://telegram.org/favicon.ico" class="about-icon" onclick="window.open('https://t.me/eleccell')"></div><p><strong>Eleccell Software CO.</strong> <span data-i18n="about_country">in Egypt</span></p></div></div>
+<div id="bottom-bar"><div id="connection-status"><div class="status-indicator" id="status-indicator"></div><span id="status-text" data-i18n="status_online">Online</span></div><div class="bottom-buttons"><button id="privacy-policy" data-i18n="btn_privacy">Privacy Policy</button><button id="about-us" data-i18n="btn_about">About Us</button></div><div id="error-count"><span id="error-count-value">0</span><span data-i18n="errors_label">errors</span></div></div>
+<button id="learn-programming" onclick="window.open('https://mobarmegeroadhead.netlify.app', '_blank')" data-i18n="btn_learn">💻 Learn Programming</button>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.30.1/min/vs/loader.min.js"></script>
+<script>
+(function(){
+  // Translations (English default + Russian added)
+  const translations = {
+    ar: { welcome_title: "مرحباً بك في WritoRun", welcome_text: "المحرر المتكامل الذي يلبي جميع احتياجاتك البرمجية", mobile_title: "تجربة المستخدم محدودة", mobile_text: "للحصول على أفضل تجربة نوصي باستخدام جهاز كمبيوتر", produced_by: "من إنتاج", btn_html: "HTML", btn_css: "CSS", btn_js: "JS", btn_search: "بحث", btn_preview: "معاينة", btn_newtab: "تبويب جديد", btn_download: "تحميل", btn_copy: "نسخ", btn_runpython: "تشغيل Python", tab_projects: "📂 المشاريع", tab_settings: "⚙️ الإعدادات", btn_newproject: "+ مشروع جديد", btn_import: "📁 استيراد مشروع", settings_title: "الإعدادات", settings_lang_prog: "🌐 لغة البرمجة", settings_ui_lang: "🌍 لغة الواجهة", download_format: "📥 تنسيق التحميل", opt_single: "ملف HTML واحد", opt_separate: "ملفات منفصلة (HTML/CSS/JS)", settings_darkmode: "🌙 الوضع المظلم", settings_autoindent: "↹ المسافة التلقائية", settings_fontsize: "🔤 حجم الخط", settings_fontfamily: "✍️ نوع الخط", btn_reset: "استعادة", settings_deleteall: "🗑️ حذف كل المشاريع", btn_deleteall: "حذف الكل", settings_asklocation: "📁 طلب موقع التحميل", settings_theme_colors: "🎨 تخصيص الألوان", color_keyword: "🔑 الكلمات المفتاحية (وسوم)", color_string: "📝 لون النصوص", color_comment: "💬 لون التعليقات", color_bracket: "🔗 الأقواس / المعاملات", color_attribute: "🏷️ اسم السمة", color_attrvalue: "🔧 قيمة السمة", color_cssprop: "🎨 خاصية CSS", btn_restore: "⟳ استعادة الألوان الافتراضية", python_output_title: "🐍 مخرجات Python", btn_clearoutput: "مسح المخرجات", modal_newproject: "مشروع جديد", placeholder_projectname: "اسم المشروع", type_website: "موقع ويب (HTML+CSS+JS)", type_js: "ملف JavaScript", type_html: "ملف HTML", type_css: "ملف CSS", type_python: "ملف Python (.py)", btn_create: "إنشاء", about_title: "من نحن", about_text: "WritoRun - محرر ويب متكامل", about_country: "بمصر", status_online: "متصل", btn_privacy: "سياسة الخصوصية", btn_about: "من نحن", errors_label: "أخطاء", btn_learn: "💻 تعلم البرمجة", alert_copied: "تم النسخ!", alert_privacy: "الخصوصية: يتم تخزين بياناتك محلياً فقط.", alert_delete_confirm: "⚠️ هل أنت متأكد من حذف جميع المشاريع؟", alert_deleted_all: "تم حذف جميع المشاريع.", alert_enter_name: "الرجاء إدخال اسم المشروع", confirm_delete_project: "هل تريد حذف هذا المشروع؟", prompt_new_name: "اسم جديد:" },
+    en: { welcome_title: "Welcome to WritoRun", welcome_text: "The integrated code editor that meets all your programming needs", mobile_title: "Limited User Experience", mobile_text: "For the best experience, we recommend using a computer", produced_by: "produced by", btn_html: "HTML", btn_css: "CSS", btn_js: "JS", btn_search: "Search", btn_preview: "Preview", btn_newtab: "New Tab", btn_download: "Download", btn_copy: "Copy", btn_runpython: "Run Python", tab_projects: "📂 Projects", tab_settings: "⚙️ Settings", btn_newproject: "+ New Project", btn_import: "📁 Import Project", settings_title: "Settings", settings_lang_prog: "🌐 Programming Language", settings_ui_lang: "🌍 Interface Language", download_format: "📥 Download Format", opt_single: "Single HTML file", opt_separate: "Separate files (HTML/CSS/JS)", settings_darkmode: "🌙 Dark Mode", settings_autoindent: "↹ Auto Indent", settings_fontsize: "🔤 Font Size", settings_fontfamily: "✍️ Font Family", btn_reset: "Reset", settings_deleteall: "🗑️ Delete All Projects", btn_deleteall: "Delete All", settings_asklocation: "📁 Ask for download location", settings_theme_colors: "🎨 Custom Theme Colors", color_keyword: "🔑 Keyword (tags)", color_string: "📝 String Color", color_comment: "💬 Comment Color", color_bracket: "🔗 Brackets / Operators", color_attribute: "🏷️ Attribute Name", color_attrvalue: "🔧 Attribute Value", color_cssprop: "🎨 CSS Property", btn_restore: "⟳ Restore Default Colors", python_output_title: "🐍 Python Output", btn_clearoutput: "Clear Output", modal_newproject: "New Project", placeholder_projectname: "Project Name", type_website: "Website (HTML+CSS+JS)", type_js: "JavaScript File", type_html: "HTML File", type_css: "CSS File", type_python: "Python File (.py)", btn_create: "Create", about_title: "About Us", about_text: "WritoRun - Integrated Web Editor", about_country: "in Egypt", status_online: "Online", btn_privacy: "Privacy Policy", btn_about: "About Us", errors_label: "errors", btn_learn: "💻 Learn Programming", alert_copied: "Copied!", alert_privacy: "Privacy: Your data is stored locally only.", alert_delete_confirm: "⚠️ Delete ALL projects?", alert_deleted_all: "All projects deleted.", alert_enter_name: "Please enter project name", confirm_delete_project: "Delete this project?", prompt_new_name: "New name:" },
+    ko: { welcome_title: "WritoRun에 오신 것을 환영합니다", welcome_text: "모든 프로그래밍 요구를 충족하는 통합 코드 편집기", mobile_title: "제한된 사용자 경험", mobile_text: "최상의 경험을 위해 컴퓨터 사용을 권장합니다", produced_by: "제작", btn_html: "HTML", btn_css: "CSS", btn_js: "JS", btn_search: "검색", btn_preview: "미리보기", btn_newtab: "새 탭", btn_download: "다운로드", btn_copy: "복사", btn_runpython: "Python 실행", tab_projects: "📂 프로젝트", tab_settings: "⚙️ 설정", btn_newproject: "+ 새 프로젝트", btn_import: "📁 프로젝트 가져오기", settings_title: "설정", settings_lang_prog: "🌐 프로그래밍 언어", settings_ui_lang: "🌍 인터페이스 언어", download_format: "📥 다운로드 형식", opt_single: "단일 HTML 파일", opt_separate: "분리된 파일 (HTML/CSS/JS)", settings_darkmode: "🌙 다크 모드", settings_autoindent: "↹ 자동 들여쓰기", settings_fontsize: "🔤 글꼴 크기", settings_fontfamily: "✍️ 글꼴 종류", btn_reset: "초기화", settings_deleteall: "🗑️ 모든 프로젝트 삭제", btn_deleteall: "모두 삭제", settings_asklocation: "📁 다운로드 위치 묻기", settings_theme_colors: "🎨 테마 색상 사용자 정의", color_keyword: "🔑 키워드(태그)", color_string: "📝 문자열 색상", color_comment: "💬 주석 색상", color_bracket: "🔗 괄호 / 연산자", color_attribute: "🏷️ 속성 이름", color_attrvalue: "🔧 속성 값", color_cssprop: "🎨 CSS 속성", btn_restore: "⟳ 기본 색상 복원", python_output_title: "🐍 Python 출력", btn_clearoutput: "출력 지우기", modal_newproject: "새 프로젝트", placeholder_projectname: "프로젝트 이름", type_website: "웹사이트 (HTML+CSS+JS)", type_js: "JavaScript 파일", type_html: "HTML 파일", type_css: "CSS 파일", type_python: "Python 파일 (.py)", btn_create: "생성", about_title: "회사 정보", about_text: "WritoRun - 통합 웹 편집기", about_country: "이집트", status_online: "온라인", btn_privacy: "개인정보 보호정책", btn_about: "회사 정보", errors_label: "오류", btn_learn: "💻 프로그래밍 배우기", alert_copied: "복사됨!", alert_privacy: "개인정보: 데이터는 로컬에만 저장됩니다.", alert_delete_confirm: "⚠️ 모든 프로젝트를 삭제하시겠습니까?", alert_deleted_all: "모든 프로젝트가 삭제되었습니다.", alert_enter_name: "프로젝트 이름을 입력하세요", confirm_delete_project: "이 프로젝트를 삭제하시겠습니까?", prompt_new_name: "새 이름:" },
+    ja: { welcome_title: "WritoRunへようこそ", welcome_text: "すべてのプログラミングニーズを満たす統合コードエディタ", mobile_title: "限定されたユーザー体験", mobile_text: "最良の体験のためにコンピューターの使用をお勧めします", produced_by: "制作", btn_html: "HTML", btn_css: "CSS", btn_js: "JS", btn_search: "検索", btn_preview: "プレビュー", btn_newtab: "新規タブ", btn_download: "ダウンロード", btn_copy: "コピー", btn_runpython: "Pythonを実行", tab_projects: "📂 プロジェクト", tab_settings: "⚙️ 設定", btn_newproject: "+ 新規プロジェクト", btn_import: "📁 プロジェクトをインポート", settings_title: "設定", settings_lang_prog: "🌐 プログラミング言語", settings_ui_lang: "🌍 インターフェース言語", download_format: "📥 ダウンロード形式", opt_single: "単一HTMLファイル", opt_separate: "個別ファイル (HTML/CSS/JS)", settings_darkmode: "🌙 ダークモード", settings_autoindent: "↹ 自動インデント", settings_fontsize: "🔤 フォントサイズ", settings_fontfamily: "✍️ フォントファミリー", btn_reset: "リセット", settings_deleteall: "🗑️ 全プロジェクトを削除", btn_deleteall: "すべて削除", settings_asklocation: "📁 ダウンロード場所を確認", settings_theme_colors: "🎨 テーマカラーカスタマイズ", color_keyword: "🔑 キーワード(タグ)", color_string: "📝 文字列色", color_comment: "💬 コメント色", color_bracket: "🔗 括弧 / 演算子", color_attribute: "🏷️ 属性名", color_attrvalue: "🔧 属性値", color_cssprop: "🎨 CSSプロパティ", btn_restore: "⟳ デフォルト色に戻す", python_output_title: "🐍 Python出力", btn_clearoutput: "出力をクリア", modal_newproject: "新規プロジェクト", placeholder_projectname: "プロジェクト名", type_website: "ウェブサイト (HTML+CSS+JS)", type_js: "JavaScriptファイル", type_html: "HTMLファイル", type_css: "CSSファイル", type_python: "Pythonファイル (.py)", btn_create: "作成", about_title: "会社情報", about_text: "WritoRun - 統合ウェブエディタ", about_country: "エジプト", status_online: "オンライン", btn_privacy: "プライバシーポリシー", btn_about: "会社情報", errors_label: "エラー", btn_learn: "💻 プログラミングを学ぶ", alert_copied: "コピーしました！", alert_privacy: "プライバシー: データはローカルにのみ保存されます。", alert_delete_confirm: "⚠️ すべてのプロジェクトを削除しますか？", alert_deleted_all: "すべてのプロジェクトを削除しました。", alert_enter_name: "プロジェクト名を入力してください", confirm_delete_project: "このプロジェクトを削除しますか？", prompt_new_name: "新しい名前:" },
+    zh: { welcome_title: "欢迎使用 WritoRun", welcome_text: "满足您所有编程需求的一体化代码编辑器", mobile_title: "有限的使用体验", mobile_text: "为获得最佳体验，建议使用电脑", produced_by: "出品方", btn_html: "HTML", btn_css: "CSS", btn_js: "JS", btn_search: "搜索", btn_preview: "预览", btn_newtab: "新标签页", btn_download: "下载", btn_copy: "复制", btn_runpython: "运行 Python", tab_projects: "📂 项目", tab_settings: "⚙️ 设置", btn_newproject: "+ 新建项目", btn_import: "📁 导入项目", settings_title: "设置", settings_lang_prog: "🌐 编程语言", settings_ui_lang: "🌍 界面语言", download_format: "📥 下载格式", opt_single: "单个 HTML 文件", opt_separate: "分离的文件 (HTML/CSS/JS)", settings_darkmode: "🌙 暗色模式", settings_autoindent: "↹ 自动缩进", settings_fontsize: "🔤 字体大小", settings_fontfamily: "✍️ 字体族", btn_reset: "重置", settings_deleteall: "🗑️ 删除所有项目", btn_deleteall: "全部删除", settings_asklocation: "📁 询问下载位置", settings_theme_colors: "🎨 自定义主题颜色", color_keyword: "🔑 关键字(标签)", color_string: "📝 字符串颜色", color_comment: "💬 注释颜色", color_bracket: "🔗 括号 / 运算符", color_attribute: "🏷️ 属性名称", color_attrvalue: "🔧 属性值", color_cssprop: "🎨 CSS 属性", btn_restore: "⟳ 恢复默认颜色", python_output_title: "🐍 Python 输出", btn_clearoutput: "清除输出", modal_newproject: "新建项目", placeholder_projectname: "项目名称", type_website: "网站 (HTML+CSS+JS)", type_js: "JavaScript 文件", type_html: "HTML 文件", type_css: "CSS 文件", type_python: "Python 文件 (.py)", btn_create: "创建", about_title: "关于我们", about_text: "WritoRun - 一体化网页编辑器", about_country: "埃及", status_online: "在线", btn_privacy: "隐私政策", btn_about: "关于我们", errors_label: "错误", btn_learn: "💻 学习编程", alert_copied: "已复制！", alert_privacy: "隐私：您的数据仅存储在本地。", alert_delete_confirm: "⚠️ 删除所有项目？", alert_deleted_all: "所有项目已删除。", alert_enter_name: "请输入项目名称", confirm_delete_project: "删除此项目？", prompt_new_name: "新名称：" },
+    ru: { welcome_title: "Добро пожаловать в WritoRun", welcome_text: "Интегрированный редактор кода для всех ваших потребностей", mobile_title: "Ограниченный опыт", mobile_text: "Для лучшего опыта рекомендуем использовать компьютер", produced_by: "произведено", btn_html: "HTML", btn_css: "CSS", btn_js: "JS", btn_search: "Поиск", btn_preview: "Предпросмотр", btn_newtab: "Новая вкладка", btn_download: "Скачать", btn_copy: "Копировать", btn_runpython: "Запустить Python", tab_projects: "📂 Проекты", tab_settings: "⚙️ Настройки", btn_newproject: "+ Новый проект", btn_import: "📁 Импорт проекта", settings_title: "Настройки", settings_lang_prog: "🌐 Язык программирования", settings_ui_lang: "🌍 Язык интерфейса", download_format: "📥 Формат скачивания", opt_single: "Один HTML файл", opt_separate: "Отдельные файлы (HTML/CSS/JS)", settings_darkmode: "🌙 Тёмная тема", settings_autoindent: "↹ Автоотступ", settings_fontsize: "🔤 Размер шрифта", settings_fontfamily: "✍️ Семейство шрифтов", btn_reset: "Сброс", settings_deleteall: "🗑️ Удалить все проекты", btn_deleteall: "Удалить всё", settings_asklocation: "📁 Спрашивать место загрузки", settings_theme_colors: "🎨 Пользовательские цвета темы", color_keyword: "🔑 Ключевые слова (теги)", color_string: "📝 Цвет строк", color_comment: "💬 Цвет комментариев", color_bracket: "🔗 Скобки / Операторы", color_attribute: "🏷️ Имя атрибута", color_attrvalue: "🔧 Значение атрибута", color_cssprop: "🎨 Свойство CSS", btn_restore: "⟳ Восстановить цвета по умолчанию", python_output_title: "🐍 Вывод Python", btn_clearoutput: "Очистить вывод", modal_newproject: "Новый проект", placeholder_projectname: "Имя проекта", type_website: "Веб-сайт (HTML+CSS+JS)", type_js: "JavaScript файл", type_html: "HTML файл", type_css: "CSS файл", type_python: "Python файл (.py)", btn_create: "Создать", about_title: "О нас", about_text: "WritoRun - Интегрированный веб-редактор", about_country: "в Египте", status_online: "В сети", btn_privacy: "Политика конфиденциальности", btn_about: "О нас", errors_label: "ошибки", btn_learn: "💻 Изучить программирование", alert_copied: "Скопировано!", alert_privacy: "Конфиденциальность: ваши данные хранятся только локально.", alert_delete_confirm: "⚠️ Удалить ВСЕ проекты?", alert_deleted_all: "Все проекты удалены.", alert_enter_name: "Пожалуйста, введите имя проекта", confirm_delete_project: "Удалить этот проект?", prompt_new_name: "Новое имя:" }
+  };
+
+  let currentUILang = 'en';
+  function applyUILanguage(lang) {
+    const elements = document.querySelectorAll('[data-i18n]');
+    elements.forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (translations[lang] && translations[lang][key]) {
+        if (el.tagName === 'INPUT' && el.hasAttribute('placeholder')) {
+          el.placeholder = translations[lang][key];
+        } else if (el.tagName === 'BUTTON' || el.tagName === 'DIV' || el.tagName === 'SPAN' || el.tagName === 'H2' || el.tagName === 'H4' || el.tagName === 'P' || el.tagName === 'LABEL') {
+          el.innerText = translations[lang][key];
+        } else if (el.tagName === 'OPTION') {
+          el.innerText = translations[lang][key];
+        } else {
+          el.innerText = translations[lang][key];
+        }
+      }
+    });
+    updateConnectionStatus();
+  }
+  function setUILanguage(lang) {
+    currentUILang = lang;
+    localStorage.setItem('ui_lang', lang);
+    applyUILanguage(lang);
+  }
+
+  // State
+  let currentMode = 'web';
+  let currentLanguage = 'html';
+  let editorContents = { html: '<!DOCTYPE html>\n<html>\n<head><title>My Page</title></head>\n<body>\n<h1>Hello World</h1>\n</body>\n</html>', css: 'body {\n  background-color: #f4f4f4;\n}', javascript: 'console.log("Hello from JS");', python: 'print("Hello from Python!")\n# Write your Python code here' };
+  let currentProject = null;
+  let projects = [];
+  let editor = null;
+  let isDarkMode = true;
+  let askDownloadLocation = false;
+  let downloadFormat = 'separate';
+  let autoIndentEnabled = true;
+  let fontSize = 16;
+  let fontFamily = "'Fira Code', monospace";
+  
+  // DOM elements
+  const welcomeMsg = document.getElementById('welcome-message');
+  const projectModal = document.getElementById('project-modal');
+  const aboutModal = document.getElementById('about-us-modal');
+  const projectsList = document.getElementById('projects-list');
+  const darkToggle = document.getElementById('dark-mode-toggle');
+  const askLocationToggle = document.getElementById('ask-download-location');
+  const autoIndentToggle = document.getElementById('auto-indent-toggle');
+  const fontSizeSlider = document.getElementById('font-size-slider');
+  const fontSizeValue = document.getElementById('font-size-value');
+  const resetFontSizeBtn = document.getElementById('reset-font-size');
+  const fontFamilySelect = document.getElementById('font-family-select');
+  const previewPane = document.getElementById('preview-pane');
+  const previewFrame = document.getElementById('preview-frame');
+  const errorCountSpan = document.getElementById('error-count-value');
+  const primaryColorPicker = document.getElementById('primary-color-picker');
+  const secondaryColorPicker = document.getElementById('secondary-color-picker');
+  const commentColorPicker = document.getElementById('comment-color-picker');
+  const bracketColorPicker = document.getElementById('bracket-color-picker');
+  const attributeColorPicker = document.getElementById('attribute-color-picker');
+  const attrvalueColorPicker = document.getElementById('attrvalue-color-picker');
+  const csspropColorPicker = document.getElementById('cssprop-color-picker');
+  const languageModeSelect = document.getElementById('language-mode-select');
+  const pythonOutputPanel = document.getElementById('python-output-panel');
+  const pythonOutputArea = document.getElementById('python-output-area');
+  const clearPythonOutput = document.getElementById('clear-python-output');
+  const restoreDefaultBtn = document.getElementById('restore-default-btn');
+  const uiLangSelect = document.getElementById('ui-language-select');
+  const downloadFormatSelect = document.getElementById('download-format-select');
+  
+  // Helper functions
+  function saveProjectsToStorage() { const user = JSON.parse(localStorage.getItem('currentUser') || '{"phone":"guest"}'); localStorage.setItem(`projects_${user.phone}`, JSON.stringify(projects)); }
+  function loadProjectsFromStorage() { const user = JSON.parse(localStorage.getItem('currentUser') || '{"phone":"guest"}'); const stored = localStorage.getItem(`projects_${user.phone}`); projects = stored ? JSON.parse(stored) : []; renderProjects(); }
+  function renderProjects() { if(!projectsList) return; projectsList.innerHTML = ''; projects.forEach(project => { const div = document.createElement('div'); div.className = 'project-item'; div.innerHTML = `<div class="project-info" data-id="${project.id}"><div class="project-name">${escapeHtml(project.name)}</div><div class="project-type">${getProjectTypeName(project.type)} - ${project.date||''}</div></div><div class="project-actions"><button class="project-action edit-project" data-id="${project.id}">✏️</button><button class="project-action delete-project" data-id="${project.id}">🗑️</button></div>`; projectsList.appendChild(div); }); document.querySelectorAll('.project-info').forEach(el => el.addEventListener('click', (e) => loadProjectById(el.getAttribute('data-id')))); document.querySelectorAll('.edit-project').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); editProjectById(btn.getAttribute('data-id')); })); document.querySelectorAll('.delete-project').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); deleteProjectById(btn.getAttribute('data-id')); })); }
+  function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){return m==='&'?'&amp;':m==='<'?'&lt;':'&gt;';}); }
+  function getProjectTypeName(type) { const map={'html-css-js':'Website','js':'JavaScript','html':'HTML','css':'CSS','python':'Python'}; return map[type]||type; }
+  function loadProjectById(id) { const p = projects.find(p=>p.id===id); if(p){ currentProject=p; if(p.type === 'python') { setLanguageMode('python', false); editorContents.python = p.content.python || '# Python code\nprint("Hello")'; if(editor && currentMode === 'python') editor.setValue(editorContents.python); } else { setLanguageMode('web', false); editorContents.html = p.content.html || ''; editorContents.css = p.content.css || ''; editorContents.javascript = p.content.javascript || ''; if(editor && currentMode === 'web') { const lang = currentLanguage; const newModel = monaco.editor.createModel(editorContents[lang], lang); editor.setModel(newModel); } } } }
+  function editProjectById(id) { const p=projects.find(p=>p.id===id); if(p){ const newName=prompt(translations[currentUILang].prompt_new_name, p.name); if(newName&&newName.trim()){ p.name=newName.trim(); p.date=new Date().toLocaleDateString(); saveProjectsToStorage(); renderProjects(); if(currentProject&&currentProject.id===id) currentProject.name=newName; } } }
+  function deleteProjectById(id) { if(confirm(translations[currentUILang].confirm_delete_project)){ projects=projects.filter(p=>p.id!==id); saveProjectsToStorage(); renderProjects(); if(currentProject&&currentProject.id===id){ currentProject=null; if(currentMode==='web') editorContents={html:'',css:'',javascript:''}; else editorContents.python=''; if(editor) editor.setValue(currentMode==='web'? '' : editorContents.python); } } }
+  function deleteAllProjects() { if(confirm(translations[currentUILang].alert_delete_confirm)){ projects=[]; saveProjectsToStorage(); renderProjects(); currentProject=null; if(currentMode==='web') editorContents={html:'',css:'',javascript:''}; else editorContents.python=''; if(editor) editor.setValue(''); alert(translations[currentUILang].alert_deleted_all); } }
+  function saveCurrentProject() { if(currentProject && editor){ if(currentMode === 'web') { editorContents[currentLanguage] = editor.getValue(); currentProject.content = { html: editorContents.html, css: editorContents.css, javascript: editorContents.javascript }; } else { editorContents.python = editor.getValue(); currentProject.content = { python: editorContents.python }; } const idx=projects.findIndex(p=>p.id===currentProject.id); if(idx!==-1) projects[idx]=currentProject; saveProjectsToStorage(); renderProjects(); } }
+  
+  // Apply editor settings
+  function updateEditorSettings() {
+    if(!editor) return;
+    editor.updateOptions({
+      fontSize: fontSize,
+      fontFamily: fontFamily,
+      autoIndent: autoIndentEnabled ? 'full' : 'none',
+      formatOnPaste: false,
+      autoClosingBrackets: autoIndentEnabled ? 'languageDefined' : 'never'
+    });
+  }
+  
+  // Custom theme with CSS property fix
+  function applyCustomTheme() {
+    if(!monaco || !monaco.editor || !editor) return;
+    const keywordColor = primaryColorPicker.value.slice(1);
+    const stringColor = secondaryColorPicker.value.slice(1);
+    const commentColor = commentColorPicker.value.slice(1);
+    const bracketColor = bracketColorPicker.value.slice(1);
+    const attributeColor = attributeColorPicker.value.slice(1);
+    const attrValueColor = attrvalueColorPicker.value.slice(1);
+    const cssPropColor = csspropColorPicker.value.slice(1);
+    const themeName = 'customWritoTheme';
+    const baseTheme = isDarkMode ? 'vs-dark' : 'vs';
+    monaco.editor.defineTheme(themeName, {
+      base: baseTheme,
+      inherit: true,
+      rules: [
+        { token: 'keyword', foreground: keywordColor, fontStyle: 'bold' },
+        { token: 'string', foreground: stringColor },
+        { token: 'string.key', foreground: stringColor },
+        { token: 'string.value', foreground: stringColor },
+        { token: 'type', foreground: keywordColor },
+        { token: 'comment', foreground: commentColor, fontStyle: 'italic' },
+        { token: 'tag', foreground: keywordColor },
+        { token: 'delimiter', foreground: bracketColor },
+        { token: 'delimiter.html', foreground: bracketColor },
+        { token: 'operator', foreground: bracketColor },
+        { token: 'bracket', foreground: bracketColor },
+        { token: 'delimiter.bracket', foreground: bracketColor },
+        { token: 'delimiter.square', foreground: bracketColor },
+        { token: 'delimiter.parenthesis', foreground: bracketColor },
+        { token: 'delimiter.curly', foreground: bracketColor },
+        { token: 'attribute.name', foreground: attributeColor },
+        { token: 'attribute.name.html', foreground: attributeColor },
+        { token: 'attribute.value', foreground: attrValueColor },
+        { token: 'attribute.value.html', foreground: attrValueColor },
+        { token: 'property', foreground: cssPropColor },
+        { token: 'property.css', foreground: cssPropColor },
+        { token: 'selector', foreground: cssPropColor },
+        { token: 'selector.css', foreground: cssPropColor }
+      ],
+      colors: {}
+    });
+    monaco.editor.setTheme(themeName);
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{"phone":"guest"}');
+    user.codePrimary = primaryColorPicker.value;
+    user.codeSecondary = secondaryColorPicker.value;
+    user.commentColor = commentColorPicker.value;
+    user.bracketColor = bracketColorPicker.value;
+    user.attributeColor = attributeColorPicker.value;
+    user.attrValueColor = attrvalueColorPicker.value;
+    user.cssPropColor = csspropColorPicker.value;
+    localStorage.setItem('currentUser', JSON.stringify(user));
+  }
+  
+  function restoreDefaultTheme() {
+    primaryColorPicker.value = '#569CD6';
+    secondaryColorPicker.value = '#CE9178';
+    commentColorPicker.value = '#6A9955';
+    bracketColorPicker.value = '#E06C75';
+    attributeColorPicker.value = '#9CDCFE';
+    attrvalueColorPicker.value = '#CE9178';
+    csspropColorPicker.value = '#D7BA7D';
+    applyCustomTheme();
+  }
+  
+  // Download function
+  function downloadBlob(content, filename, mimeType) {
+    const blob = new Blob([content], {type: mimeType});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  }
+  
+  function downloadHtml() {
+    if(currentMode !== 'web') return;
+    if(downloadFormat === 'single') {
+      const fullHtml = `${editorContents.html || ''}\n<style>${editorContents.css || ''}</style>\n<script>${editorContents.javascript || ''}<\/script>`;
+      const fileName = (currentProject ? currentProject.name : 'project') + '.html';
+      if(askDownloadLocation && window.showSaveFilePicker) {
+        window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'HTML File', accept: { 'text/html': ['.html'] } }] })
+          .then(handle=>handle.createWritable().then(w=>w.write(fullHtml).then(()=>w.close())))
+          .catch(()=>{});
+      } else {
+        downloadBlob(fullHtml, fileName, 'text/html');
+      }
+    } else {
+      downloadBlob(editorContents.html || '', 'index.html', 'text/html');
+      setTimeout(() => downloadBlob(editorContents.css || '', 'style.css', 'text/css'), 200);
+      setTimeout(() => downloadBlob(editorContents.javascript || '', 'script.js', 'application/javascript'), 400);
+    }
+  }
+  
+  function setLanguageMode(mode, saveContent = true) {
+    if(mode === currentMode && editor) return;
+    if(saveContent && editor && currentMode === 'web') editorContents[currentLanguage] = editor.getValue();
+    if(saveContent && editor && currentMode === 'python') editorContents.python = editor.getValue();
+    currentMode = mode;
+    languageModeSelect.value = mode;
+    const webButtons = ['[data-lang="html"]', '[data-lang="css"]', '[data-lang="javascript"]', '#run-preview', '#run-tab', '#download-html'].join(',');
+    if(mode === 'web') {
+      document.querySelectorAll(webButtons).forEach(btn => { if(btn) btn.style.display = ''; });
+      document.querySelector('#run-python-btn').style.display = 'none';
+      pythonOutputPanel.style.display = 'none';
+      previewPane.style.display = 'none';
+      if(editor) {
+        const lang = currentLanguage;
+        const newModel = monaco.editor.createModel(editorContents[lang] || '', lang);
+        editor.setModel(newModel);
+        updateEditorSettings();
+      }
+    } else {
+      document.querySelectorAll(webButtons).forEach(btn => { if(btn) btn.style.display = 'none'; });
+      document.querySelector('#run-python-btn').style.display = '';
+      pythonOutputPanel.style.display = 'flex';
+      previewPane.style.display = 'none';
+      if(editor) {
+        const pythonCode = editorContents.python || 'print("Hello Python")';
+        const newModel = monaco.editor.createModel(pythonCode, 'python');
+        editor.setModel(newModel);
+        updateEditorSettings();
+      }
+    }
+    if(editor) applyCustomTheme();
+  }
+  
+  function runPythonCode() {
+    if(currentMode !== 'python') return;
+    const code = editor.getValue();
+    pythonOutputArea.innerHTML = '';
+    Sk.configure({ output: (text) => { pythonOutputArea.innerHTML += text; }, read: (filename) => { if(Sk.builtinFiles && Sk.builtinFiles.files[filename]) return Sk.builtinFiles.files[filename]; else throw new Error("File not found: " + filename); } });
+    try {
+      Sk.misceval.asyncToPromise(function() { return Sk.importMainWithBody('<stdin>', false, code, false); });
+    } catch(e) { pythonOutputArea.innerHTML += 'Error: ' + e.toString(); }
+  }
+  
+  function initMonaco() {
+    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.30.1/min/vs' } });
+    require(["vs/editor/editor.main"], function () {
+      editor = monaco.editor.create(document.getElementById("editor-container"), {
+        value: editorContents.html,
+        language: 'html',
+        theme: isDarkMode ? 'vs-dark' : 'vs-light',
+        automaticLayout: true,
+        fontSize: fontSize,
+        fontFamily: fontFamily,
+        autoIndent: autoIndentEnabled ? 'full' : 'none',
+        formatOnPaste: false,
+        autoClosingBrackets: autoIndentEnabled ? 'languageDefined' : 'never'
+      });
+      // Intercept paste to temporarily disable autoIndent
+      editor.onDidPaste(() => {
+        if(autoIndentEnabled) {
+          const wasEnabled = autoIndentEnabled;
+          editor.updateOptions({ autoIndent: 'none', autoClosingBrackets: 'never' });
+          setTimeout(() => {
+            if(wasEnabled) editor.updateOptions({ autoIndent: 'full', autoClosingBrackets: 'languageDefined' });
+          }, 100);
+        }
+      });
+      editor.onDidChangeModelContent(() => { if(editor) saveCurrentProject(); updateErrorCount(); });
+      editor.onDidChangeModelDecorations(() => updateErrorCount());
+      const user = JSON.parse(localStorage.getItem('currentUser') || '{"phone":"guest"}');
+      if(user.codePrimary && user.codeSecondary && user.commentColor && user.bracketColor && user.attributeColor && user.attrValueColor && user.cssPropColor) {
+        primaryColorPicker.value = user.codePrimary;
+        secondaryColorPicker.value = user.codeSecondary;
+        commentColorPicker.value = user.commentColor;
+        bracketColorPicker.value = user.bracketColor;
+        attributeColorPicker.value = user.attributeColor;
+        attrvalueColorPicker.value = user.attrValueColor;
+        csspropColorPicker.value = user.cssPropColor;
+      } else {
+        restoreDefaultTheme();
+      }
+      applyCustomTheme();
+      updateErrorCount();
+      setLanguageMode('web', false);
+    });
+  }
+  
+  function switchEditor(lang, btn) { if(!editor || currentMode !== 'web') return; editorContents[currentLanguage]=editor.getValue(); currentLanguage=lang; const newModel=monaco.editor.createModel(editorContents[lang],lang); editor.setModel(newModel); document.querySelectorAll('#editor-buttons button[data-lang]').forEach(b=>b.classList.remove('active')); if(btn) btn.classList.add('active'); updateEditorSettings(); }
+  function showPreview() { if(currentMode !== 'web') return; const html=editorContents.html||''; const css=`<style>${editorContents.css||''}</style>`; const js=`<script>${editorContents.javascript||''}<\/script>`; previewFrame.srcdoc=`${html}\n${css}\n${js}`; previewPane.style.display='block'; }
+  function openInNewTab() { if(currentMode !== 'web') return; const html=editorContents.html||''; const css=`<style>${editorContents.css||''}</style>`; const js=`<script>${editorContents.javascript||''}<\/script>`; const blob=new Blob([`${html}\n${css}\n${js}`],{type:'text/html'}); window.open(URL.createObjectURL(blob),'_blank'); }
+  function copyCode() { if(editor) navigator.clipboard.writeText(editor.getValue()).then(()=>alert(translations[currentUILang].alert_copied)); }
+  function searchInCode() { if(editor) editor.getAction('actions.find').run(); }
+  function updateErrorCount() { if(editor&&monaco.editor&&editor.getModel()){ const markers=monaco.editor.getModelMarkers({resource:editor.getModel().uri}); const errors=markers.filter(m=>m.severity===monaco.MarkerSeverity.Error).length; errorCountSpan.textContent=errors; } }
+  function updateConnectionStatus() { const online=navigator.onLine; const ind=document.getElementById('status-indicator'); const txt=document.getElementById('status-text'); if(online){ ind.classList.remove('offline'); txt.textContent=translations[currentUILang].status_online; } else { ind.classList.add('offline'); txt.textContent=translations[currentUILang].status_offline || (currentUILang==='ar'?'غير متصل':'Offline'); } }
+  function toggleDarkMode(enabled) { isDarkMode=enabled; document.body.classList.toggle('dark-mode',enabled); if(editor){ applyCustomTheme(); } const user=JSON.parse(localStorage.getItem('currentUser')||'{"phone":"guest"}'); user.theme=enabled?'vs-dark':'vs-light'; localStorage.setItem('currentUser',JSON.stringify(user)); }
+  function showWelcome() { if(welcomeMsg){ welcomeMsg.style.display='flex'; setTimeout(()=>{if(welcomeMsg)welcomeMsg.style.display='none';},5000); } }
+  
+  // Event handlers
+  document.querySelectorAll('#editor-buttons button[data-lang]').forEach(btn=>btn.addEventListener('click',(e)=>switchEditor(btn.getAttribute('data-lang'),btn)));
+  document.getElementById('search-btn')?.addEventListener('click',searchInCode);
+  document.getElementById('run-preview')?.addEventListener('click',showPreview);
+  document.getElementById('run-tab')?.addEventListener('click',openInNewTab);
+  document.getElementById('download-html')?.addEventListener('click',downloadHtml);
+  document.getElementById('copy-btn')?.addEventListener('click',copyCode);
+  document.getElementById('run-python-btn')?.addEventListener('click',runPythonCode);
+  clearPythonOutput?.addEventListener('click',()=>{ pythonOutputArea.innerHTML = ''; });
+  document.getElementById('new-project-btn')?.addEventListener('click',()=>projectModal.style.display='block');
+  document.getElementById('import-project-btn')?.addEventListener('click',()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='.html,.js,.css,.py'; inp.onchange=e=>{ const file=e.target.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=ev=>{ const content=ev.target.result; const ext=file.name.split('.').pop().toLowerCase(); let type='txt'; if(ext==='html')type='html'; else if(ext==='css')type='css'; else if(ext==='js')type='js'; else if(ext==='py')type='python'; let newProj; if(type==='python') newProj={id:Date.now().toString(),name:file.name.replace(/\.[^/.]+$/,''),type:'python',date:new Date().toLocaleDateString(),content:{python:content}}; else newProj={id:Date.now().toString(),name:file.name.replace(/\.[^/.]+$/,''),type:type,date:new Date().toLocaleDateString(),content:{html:type==='html'?content:'',css:type==='css'?content:'',javascript:type==='js'?content:''}}; projects.push(newProj); saveProjectsToStorage(); renderProjects(); loadProjectById(newProj.id); }; reader.readAsText(file); }; inp.click(); });
+  document.getElementById('create-project-btn')?.addEventListener('click',()=>{ const name=document.getElementById('project-name').value.trim(); const type=document.getElementById('project-type').value; if(!name){alert(translations[currentUILang].alert_enter_name);return;} let content; if(type==='python') content={python:'# '+name+'\nprint("Hello from '+name+'")'}; else content={html:'',css:'',javascript:''}; if(type==='html-css-js'){ content.html=`<!DOCTYPE html><html><head><title>${name}</title></head><body><h1>${name}</h1></body></html>`; content.css='body{background:#f4f4f4;}'; content.javascript=`console.log("${name}");`; } else if(type==='html') content.html=`<!DOCTYPE html><html><head><title>${name}</title></head><body><h1>${name}</h1></body></html>`; else if(type==='css') content.css=`/* ${name} */\nbody{background:#fff;}`; else if(type==='js') content.javascript=`// ${name}\nconsole.log("${name}");`; const newProj={id:Date.now().toString(),name:name,type:type,date:new Date().toLocaleDateString(),content:content}; projects.push(newProj); saveProjectsToStorage(); renderProjects(); loadProjectById(newProj.id); projectModal.style.display='none'; document.getElementById('project-name').value=''; });
+  document.getElementById('close-project-modal')?.addEventListener('click',()=>projectModal.style.display='none');
+  document.getElementById('close-about-modal')?.addEventListener('click',()=>aboutModal.style.display='none');
+  document.getElementById('about-us')?.addEventListener('click',()=>aboutModal.style.display='block');
+  document.getElementById('privacy-policy')?.addEventListener('click',()=>alert(translations[currentUILang].alert_privacy));
+  darkToggle?.addEventListener('change',(e)=>toggleDarkMode(e.target.checked));
+  askLocationToggle?.addEventListener('change',(e)=>{ askDownloadLocation=e.target.checked; const user=JSON.parse(localStorage.getItem('currentUser')||'{"phone":"guest"}'); user.askLocation=askDownloadLocation; localStorage.setItem('currentUser',JSON.stringify(user)); });
+  downloadFormatSelect?.addEventListener('change', (e) => { downloadFormat = e.target.value; localStorage.setItem('downloadFormat', downloadFormat); });
+  autoIndentToggle?.addEventListener('change', (e) => { autoIndentEnabled = e.target.checked; localStorage.setItem('autoIndentEnabled', autoIndentEnabled); if(editor) updateEditorSettings(); });
+  fontSizeSlider?.addEventListener('input', (e) => { fontSize = parseInt(e.target.value); fontSizeValue.innerText = fontSize + 'px'; localStorage.setItem('editorFontSize', fontSize); if(editor) updateEditorSettings(); });
+  resetFontSizeBtn?.addEventListener('click', () => { fontSize = 16; fontSizeSlider.value = '16'; fontSizeValue.innerText = '16px'; localStorage.setItem('editorFontSize', 16); if(editor) updateEditorSettings(); });
+  fontFamilySelect?.addEventListener('change', (e) => { fontFamily = e.target.value; localStorage.setItem('editorFontFamily', fontFamily); if(editor) updateEditorSettings(); });
+  
+  primaryColorPicker?.addEventListener('input', applyCustomTheme);
+  secondaryColorPicker?.addEventListener('input', applyCustomTheme);
+  commentColorPicker?.addEventListener('input', applyCustomTheme);
+  bracketColorPicker?.addEventListener('input', applyCustomTheme);
+  attributeColorPicker?.addEventListener('input', applyCustomTheme);
+  attrvalueColorPicker?.addEventListener('input', applyCustomTheme);
+  csspropColorPicker?.addEventListener('input', applyCustomTheme);
+  
+  restoreDefaultBtn?.addEventListener('click', restoreDefaultTheme);
+  document.getElementById('delete-all-projects')?.addEventListener('click',deleteAllProjects);
+  languageModeSelect?.addEventListener('change',(e)=>setLanguageMode(e.target.value, true));
+  
+  uiLangSelect?.addEventListener('change', (e) => { setUILanguage(e.target.value); updateConnectionStatus(); });
+  
+  const projPanel=document.getElementById('sidebar-projects-panel'), setPanel=document.getElementById('sidebar-settings-panel');
+  const tabProj=document.getElementById('sidebar-tab-projects'), tabSet=document.getElementById('sidebar-tab-settings');
+  function showSidebarTab(tab){ if(tab==='projects'){ projPanel.style.display='block'; setPanel.style.display='none'; tabProj.classList.add('active'); tabSet.classList.remove('active'); } else { projPanel.style.display='none'; setPanel.style.display='block'; tabSet.classList.add('active'); tabProj.classList.remove('active'); } }
+  tabProj?.addEventListener('click',()=>showSidebarTab('projects'));
+  tabSet?.addEventListener('click',()=>showSidebarTab('settings'));
+  
+  // Load saved preferences
+  const userPref = JSON.parse(localStorage.getItem('currentUser') || '{"phone":"guest"}');
+  isDarkMode = userPref.theme !== 'vs-light';
+  if(darkToggle) darkToggle.checked = isDarkMode;
+  askDownloadLocation = userPref.askLocation || false;
+  if(askLocationToggle) askLocationToggle.checked = askDownloadLocation;
+  document.body.classList.toggle('dark-mode', isDarkMode);
+  
+  const savedFormat = localStorage.getItem('downloadFormat');
+  if(savedFormat === 'single' || savedFormat === 'separate') downloadFormat = savedFormat;
+  else downloadFormat = 'separate';
+  if(downloadFormatSelect) downloadFormatSelect.value = downloadFormat;
+  
+  const savedAutoIndent = localStorage.getItem('autoIndentEnabled');
+  if(savedAutoIndent !== null) autoIndentEnabled = savedAutoIndent === 'true';
+  else autoIndentEnabled = true;
+  if(autoIndentToggle) autoIndentToggle.checked = autoIndentEnabled;
+  
+  const savedFontSize = localStorage.getItem('editorFontSize');
+  if(savedFontSize) { fontSize = parseInt(savedFontSize); if(fontSizeSlider) fontSizeSlider.value = fontSize; if(fontSizeValue) fontSizeValue.innerText = fontSize + 'px'; }
+  const savedFontFamily = localStorage.getItem('editorFontFamily');
+  if(savedFontFamily) { fontFamily = savedFontFamily; if(fontFamilySelect) fontFamilySelect.value = fontFamily; }
+  
+  loadProjectsFromStorage();
+  initMonaco();
+  updateConnectionStatus();
+  window.addEventListener('online',updateConnectionStatus);
+  window.addEventListener('offline',updateConnectionStatus);
+  showWelcome();
+
+  // ── External Libraries Feature ──────────────────────────────────────────
+  const extLibraries = [
+    { name:'Animate.css', category:'CSS Animation', type:'css', icon:'🎞️',
+      desc:'A library of ready-to-use, cross-browser animations for use in your web projects. Includes bounces, fades, flips, zooms, sliders, and more — perfect for attention-grabbing UI effects.',
+      version:'4.1.1',
+      tags:['animation','css','effects'],
+      code:`<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">` },
+    { name:'Axios', category:'HTTP Client (JS)', type:'js', icon:'🌐',
+      desc:'A promise-based HTTP client for the browser and Node.js. Makes it easy to send asynchronous HTTP requests to REST endpoints and perform CRUD operations.',
+      version:'1.6.2',
+      tags:['http','ajax','fetch','api'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"><\/script>` },
+    { name:'Bootstrap', category:'CSS Framework', type:'css', icon:'🅱️',
+      desc:'The world\'s most popular CSS framework for building responsive, mobile-first sites. Includes pre-built grid system, components, utilities, and JavaScript plugins.',
+      version:'5.3.2',
+      tags:['css','framework','responsive','grid'],
+      code:`<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"><\/script>` },
+    { name:'Chart.js', category:'Data Visualization', type:'js', icon:'📊',
+      desc:'Simple yet flexible JavaScript charting library. Supports 8 chart types (bar, line, pie, doughnut, radar, polar area, bubble, scatter) with beautiful animations.',
+      version:'4.4.1',
+      tags:['chart','graph','visualization','canvas'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>` },
+    { name:'D3.js', category:'Data Visualization', type:'js', icon:'📈',
+      desc:'A powerful JavaScript library for producing dynamic, interactive data visualizations in web browsers. Uses HTML, SVG, and CSS with a data-driven approach.',
+      version:'7.8.5',
+      tags:['chart','visualization','svg','data'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"><\/script>` },
+    { name:'Font Awesome', category:'Icon Library', type:'css', icon:'🔠',
+      desc:'The internet\'s most popular icon toolkit with over 2,000 free icons. Scalable vector icons that can instantly be customized with CSS — size, color, drop shadow, and anything that can be done with CSS.',
+      version:'6.5.1',
+      tags:['icons','font','svg'],
+      code:`<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">` },
+    { name:'GSAP', category:'Animation (JS)', type:'js', icon:'⚡',
+      desc:'GreenSock Animation Platform — the industry standard JavaScript animation library. Animate anything with stunning performance, including SVG, CSS, canvas, React, and more.',
+      version:'3.12.3',
+      tags:['animation','gsap','tween','motion'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.3/gsap.min.js"><\/script>` },
+    { name:'Google Fonts (Roboto)', category:'Web Fonts', type:'font', icon:'🔤',
+      desc:'Google Fonts is a library of open-source font families. This snippet imports the popular Roboto typeface, designed by Christian Robertson. Swap the font name to load any Google Font.',
+      version:'Latest',
+      tags:['font','typography','roboto'],
+      code:`<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">` },
+    { name:'Hammer.js', category:'Touch Gestures (JS)', type:'js', icon:'👆',
+      desc:'A JavaScript library that adds multi-touch gesture recognition to your web pages. Supports tap, press, pan, swipe, pinch, and rotate gestures.',
+      version:'2.0.8',
+      tags:['touch','gesture','mobile','swipe'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"><\/script>` },
+    { name:'jQuery', category:'DOM Manipulation (JS)', type:'js', icon:'💛',
+      desc:'A fast, small, and feature-rich JavaScript library that simplifies HTML document traversal and manipulation, event handling, animation, and Ajax with an easy-to-use API.',
+      version:'3.7.1',
+      tags:['dom','ajax','events','jquery'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"><\/script>` },
+    { name:'Lodash', category:'Utility Library (JS)', type:'js', icon:'🔧',
+      desc:'A modern JavaScript utility library delivering modularity, performance, and extras. Provides helpful functions for arrays, objects, strings, numbers, and more.',
+      version:'4.17.21',
+      tags:['utility','array','object','helper'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"><\/script>` },
+    { name:'Lordicon', category:'Animated Icons', type:'js', icon:'🎭',
+      desc:'A library of premium, animated icon packs. Lordicon icons are web components that bring stunning animations to your UI — simply use the <lord-icon> tag.',
+      version:'Latest',
+      tags:['icons','animation','lottie'],
+      code:`<script src="https://cdn.lordicon.com/lordicon.js"><\/script>` },
+    { name:'Moment.js', category:'Date & Time (JS)', type:'js', icon:'🕐',
+      desc:'Parse, validate, manipulate, and display dates and times in JavaScript. Supports internationalization, relative time (e.g. "2 hours ago"), and timezone handling.',
+      version:'2.29.4',
+      tags:['date','time','format','locale'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"><\/script>` },
+    { name:'Particles.js', category:'Visual Effects (JS)', type:'js', icon:'✨',
+      desc:'A lightweight JavaScript library for creating stunning particle animations as backgrounds. Highly configurable with interactive mouse effects, shapes, and physics.',
+      version:'2.0.0',
+      tags:['particles','background','canvas','animation'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/particlesjs/2.0.0/particles.min.js"><\/script>` },
+    { name:'Pixi.js', category:'2D Rendering (JS)', type:'js', icon:'🎮',
+      desc:'The HTML5 creation engine. A fast, lightweight 2D rendering library using WebGL with a canvas fallback. Perfect for interactive graphics, games, and data visualization.',
+      version:'7.3.3',
+      tags:['webgl','canvas','2d','game','graphics'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.3/pixi.min.js"><\/script>` },
+    { name:'Prism.js', category:'Syntax Highlighting', type:'js', icon:'🌈',
+      desc:'A lightweight, extensible syntax highlighter. Supports hundreds of languages, provides beautiful themes, and can be used in static sites, blogs, or documentation pages.',
+      version:'1.29.0',
+      tags:['code','highlight','syntax','prism'],
+      code:`<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"><\/script>` },
+    { name:'Swiper.js', category:'Slider / Carousel', type:'js', icon:'🖼️',
+      desc:'The most modern mobile touch slider and framework. Used by hundreds of thousands of websites for creating beautiful carousels, sliders, and galleries with touch support.',
+      version:'11.0.5',
+      tags:['slider','carousel','swipe','touch'],
+      code:`<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/11.0.5/swiper-bundle.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/11.0.5/swiper-bundle.min.js"><\/script>` },
+    { name:'Tailwind CSS', category:'CSS Framework', type:'css', icon:'🌬️',
+      desc:'A utility-first CSS framework packed with classes like flex, pt-4, text-center that can be composed to build any design directly in your markup — without writing custom CSS.',
+      version:'3.4.0 (CDN)',
+      tags:['css','framework','utility','responsive'],
+      code:`<script src="https://cdn.tailwindcss.com"><\/script>` },
+    { name:'Three.js', category:'3D Graphics (JS)', type:'js', icon:'🧊',
+      desc:'A lightweight, cross-browser, general purpose 3D library. Lets you create and display animated 3D computer graphics in a web browser using WebGL.',
+      version:'r128',
+      tags:['3d','webgl','canvas','three'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>` },
+    { name:'Typed.js', category:'Text Animation (JS)', type:'js', icon:'⌨️',
+      desc:'A JavaScript library that types out strings, then deletes them, with a customizable speed — creating a typewriter effect. Perfect for hero sections and landing pages.',
+      version:'2.1.0',
+      tags:['typewriter','text','animation','typing'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.1.0/typed.umd.min.js"><\/script>` },
+    { name:'Vanta.js', category:'3D Backgrounds (JS)', type:'js', icon:'🌌',
+      desc:'Animated 3D backgrounds for your website — powered by Three.js and WebGL. Choose from fog, waves, birds, net, rings, and more with minimal setup.',
+      version:'0.5.24',
+      tags:['background','3d','webgl','animation'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.waves.min.js"><\/script>` },
+    { name:'Vue.js', category:'JavaScript Framework', type:'js', icon:'💚',
+      desc:'A progressive JavaScript framework for building user interfaces. Features a gentle learning curve, reactive data binding, component-based architecture, and powerful tooling.',
+      version:'3.4.15',
+      tags:['framework','reactive','components','vue'],
+      code:`<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.15/vue.global.min.js"><\/script>` },
+  ].sort((a,b)=>a.name.localeCompare(b.name));
+
+  const installedLibs = new Set();
+  let activeLibIndex = -1;
+
+  function renderLibList(filter='') {
+    const container = document.getElementById('ext-libs-items');
+    container.innerHTML = '';
+    const f = filter.toLowerCase();
+    extLibraries.forEach((lib, i) => {
+      const match = lib.name.toLowerCase().includes(f) || lib.category.toLowerCase().includes(f) || lib.tags.some(t=>t.includes(f));
+      if(!match) return;
+      const el = document.createElement('div');
+      el.className = 'lib-item' + (i===activeLibIndex?' active':'');
+      el.dataset.index = i;
+      const badgeClass = lib.type==='css'?'css':lib.type==='font'?'font':'js';
+      el.innerHTML = `<span>${lib.icon}</span><span style="flex:1">${lib.name}</span><span class="lib-badge ${badgeClass}">${lib.type.toUpperCase()}</span>`;
+      el.addEventListener('click', ()=>selectLib(i));
+      container.appendChild(el);
+    });
+  }
+
+  function selectLib(i) {
+    activeLibIndex = i;
+    renderLibList(document.getElementById('ext-libs-search').value);
+    const lib = extLibraries[i];
+    const detail = document.getElementById('ext-libs-info');
+    const placeholder = document.getElementById('ext-libs-placeholder');
+    placeholder.style.display = 'none';
+    detail.style.display = 'block';
+    const isInstalled = installedLibs.has(lib.name);
+    const escapedCode = lib.code.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    detail.innerHTML = `
+      <h2>${lib.icon} ${lib.name}</h2>
+      <div class="lib-category">📁 ${lib.category} &nbsp;·&nbsp; 🏷️ v${lib.version}</div>
+      <div class="lib-desc">${lib.desc}</div>
+      <div class="code-block-wrapper">
+        <div class="code-block-label">HTML snippet — paste inside &lt;head&gt;</div>
+        <div class="code-block">${escapedCode}</div>
+      </div>
+      <div class="lib-actions">
+        <button class="lib-btn-copy" id="lib-copy-btn">📋 Copy Code</button>
+        <button class="lib-btn-install ${isInstalled?'installed':''}" id="lib-install-btn">
+          ${isInstalled ? '✅ Installed' : '⚡ Install into &lt;head&gt;'}
+        </button>
+      </div>
+      ${isInstalled ? '<p style="font-size:12px;color:#6fcf6f;margin-top:10px;">✅ This library has been injected into the &lt;head&gt; of your HTML editor.</p>' : ''}
+    `;
+    document.getElementById('lib-copy-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText(lib.code).then(() => {
+        const btn = document.getElementById('lib-copy-btn');
+        btn.textContent = '✅ Copied!';
+        setTimeout(()=>btn.textContent='📋 Copy Code', 2000);
+      });
+    });
+    document.getElementById('lib-install-btn').addEventListener('click', () => {
+      if(installedLibs.has(lib.name)) return;
+      injectLibrary(lib);
+    });
+  }
+
+  function injectLibrary(lib) {
+    if(!editor || currentMode !== 'web') {
+      alert('Please switch to Web (HTML/CSS/JS) mode first.');
+      return;
+    }
+    // Save current editor content first
+    editorContents[currentLanguage] = editor.getValue();
+    let html = editorContents.html || '';
+    // Check if already present
+    const firstTag = lib.code.split('\n')[0].trim();
+    const checkStr = firstTag.substring(0, 40);
+    if(html.includes(checkStr)) {
+      alert('⚠️ This library appears to already be in your HTML.');
+      return;
+    }
+    // Inject before </head> or at top
+    if(html.includes('</head>')) {
+      html = html.replace('</head>', lib.code + '\n</head>');
+    } else if(html.includes('<head>')) {
+      html = html.replace('<head>', '<head>\n' + lib.code);
+    } else {
+      html = lib.code + '\n' + html;
+    }
+    editorContents.html = html;
+    if(currentLanguage === 'html') {
+      const model = monaco.editor.createModel(html, 'html');
+      editor.setModel(model);
+    }
+    installedLibs.add(lib.name);
+    // Re-render detail
+    selectLib(activeLibIndex);
+    // Show toast
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#28a745;color:white;padding:10px 22px;border-radius:8px;z-index:99999;font-size:14px;font-weight:600;box-shadow:0 4px 15px rgba(0,0,0,0.3)';
+    toast.textContent = `✅ ${lib.name} injected into <head>!`;
+    document.body.appendChild(toast);
+    setTimeout(()=>toast.remove(), 3000);
+  }
+
+  function openExtLibs() {
+    document.getElementById('ext-libs-modal').classList.add('open');
+    document.getElementById('ext-libs-overlay').classList.add('open');
+    renderLibList();
+  }
+  function closeExtLibs() {
+    document.getElementById('ext-libs-modal').classList.remove('open');
+    document.getElementById('ext-libs-overlay').classList.remove('open');
+  }
+  document.getElementById('ext-libs-btn').addEventListener('click', openExtLibs);
+  document.getElementById('ext-libs-close').addEventListener('click', closeExtLibs);
+  document.getElementById('ext-libs-overlay').addEventListener('click', closeExtLibs);
+  document.getElementById('ext-libs-search').addEventListener('input', e => renderLibList(e.target.value));
+  // ── End External Libraries ──────────────────────────────────────────────
+  
+  const savedLang = localStorage.getItem('ui_lang');
+  if(savedLang && translations[savedLang]) {
+    currentUILang = savedLang;
+    if(uiLangSelect) uiLangSelect.value = savedLang;
+    applyUILanguage(savedLang);
+  } else {
+    setUILanguage('en');
+  }
+})();
+</script>
+</body>
+</html>
