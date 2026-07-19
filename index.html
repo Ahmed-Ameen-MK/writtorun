@@ -920,7 +920,7 @@
   }
   
   function switchEditor(lang, btn) { if(!editor || currentMode !== 'web') return; editorContents[currentLanguage]=editor.getValue(); currentLanguage=lang; const newModel=monaco.editor.createModel(editorContents[lang],lang); editor.setModel(newModel); document.querySelectorAll('#editor-buttons button[data-lang]').forEach(b=>b.classList.remove('active')); if(btn) btn.classList.add('active'); updateEditorSettings(); }
-  function showPreview() { if(currentMode !== 'web') return; const html=editorContents.html||''; const css=`<style>${editorContents.css||''}</style>`; const js=`<script>${editorContents.javascript||''}<\/script>`; previewFrame.srcdoc=`${html}\n${css}\n${js}`; previewPane.style.display='block'; }
+  function showPreview() { if(currentMode !== 'web') return; if(editor) editorContents[currentLanguage] = editor.getValue(); const html=editorContents.html||''; const css=`<style>${editorContents.css||''}</style>`; const js=`<script>${editorContents.javascript||''}<\/script>`; previewFrame.srcdoc=`${html}\n${css}\n${js}`; previewPane.style.display='block'; }
   function openInNewTab() { if(currentMode !== 'web') return; const html=editorContents.html||''; const css=`<style>${editorContents.css||''}</style>`; const js=`<script>${editorContents.javascript||''}<\/script>`; const blob=new Blob([`${html}\n${css}\n${js}`],{type:'text/html'}); window.open(URL.createObjectURL(blob),'_blank'); }
   function copyCode() { if(editor) navigator.clipboard.writeText(editor.getValue()).then(()=>alert(translations[currentUILang].alert_copied)); }
   function searchInCode() { if(editor) editor.getAction('actions.find').run(); }
